@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFA to DFA Visualizer | Jagmohan Singh</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --final-glow: #10b981;
+            --bg: #020617;
+            --glass: rgba(15, 23, 42, 0.85);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { transition: all 0.3s ease; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            color: #f8fafc;
+            margin: 0;
+            background: var(--bg);
+            overflow-x: hidden;
+            background-image: 
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .ambient-orb {
+            position: fixed; border-radius: 50%; filter: blur(80px);
+            z-index: -1; opacity: 0.4; animation: orbFloat 10s infinite alternate ease-in-out;
+        }
+        .orb-1 { width: 400px; height: 400px; background: var(--primary); top: -100px; left: -100px; }
+        .orb-2 { width: 300px; height: 300px; background: var(--secondary); bottom: -50px; right: -50px; animation-delay: -5s; }
+
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.2); }
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #front-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; }
+        .hero-container { max-width: 1000px; width: 100%; text-align: center; }
+
+        .hero-title {
+            background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            padding: 50px; border-radius: 30px; animation: slideUpFade 0.8s ease-out; box-shadow: 0 20px 50px rgba(0,0,0,0.5); margin-bottom: 30px;
+        }
+
+        .hero-title h1 {
+            font-size: 3.5rem; margin: 0; background: linear-gradient(to right, #818cf8, #22d3ee, #f472b6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px;
+        }
+
+        .student-badge {
+            display: inline-block; margin-top: 20px; padding: 10px 25px; background: rgba(6, 182, 212, 0.1);
+            border: 1px solid var(--accent); border-radius: 50px; color: var(--accent); font-size: 1.1rem; font-weight: 600;
+        }
+
+        /* --- FRONT PAGE INFO BOXES --- */
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .info-card { background: var(--glass); border: 1px solid var(--border); padding: 25px; border-radius: 20px; text-align: left; opacity: 0; animation: slideUpFade 0.8s ease-out forwards; }
+        .info-card:nth-child(1) { animation-delay: 0.2s; border-top: 4px solid var(--primary); }
+        .info-card:nth-child(2) { animation-delay: 0.4s; border-top: 4px solid var(--accent); }
+        .info-card:nth-child(3) { animation-delay: 0.6s; border-top: 4px solid var(--secondary); }
+        .info-card h3 { color: #fff; margin-top: 0; }
+        .info-card p, .info-card ul { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 0; }
+        .info-card ul { padding-left: 20px; }
+        .code-text { font-family: 'Fira Code'; color: var(--accent); }
+
+        .btn-launch {
+            background: linear-gradient(45deg, var(--primary), var(--secondary)); padding: 18px 50px;
+            border-radius: 50px; border: none; color: white; font-size: 1.2rem; font-weight: 700;
+            cursor: pointer; opacity: 0; animation: slideUpFade 0.8s ease-out 0.8s forwards;
+        }
+        .btn-launch:hover { transform: scale(1.05); filter: brightness(1.2); }
+
+        #app-view { display: none; padding: 40px 20px; max-width: 1200px; margin: 0 auto; }
+
+        .glass-panel {
+            background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            padding: 35px; border-radius: 24px; margin-bottom: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        /* --- APP VIEW THEORY BOXES --- */
+        .theory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .theory-box {
+            background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(99, 102, 241, 0.3);
+            border-left: 4px solid var(--primary); padding: 20px; border-radius: 12px;
+        }
+        .theory-box:nth-child(2) { border-left-color: var(--accent); border-color: rgba(6, 182, 212, 0.3); }
+        .theory-box:nth-child(3) { border-left-color: var(--secondary); border-color: rgba(236, 72, 153, 0.3); }
+        .theory-box h4 { margin: 0 0 10px 0; color: #fff; font-size: 1.1rem; }
+        .theory-box p { margin: 0; font-size: 0.9rem; color: #94a3b8; line-height: 1.6; }
+
+        #error-toast {
+            display: none; background: rgba(220, 38, 38, 0.15); border: 1px solid #ef4444;
+            color: #fca5a5; padding: 15px 20px; border-radius: 12px; margin-bottom: 25px;
+            font-size: 0.95rem; display: flex; align-items: center; gap: 10px;
+        }
+
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        label { color: var(--accent); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;}
+        input {
+            width: 100%; padding: 15px; background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+            border-radius: 12px; color: #fff; font-family: 'Fira Code'; margin-top: 8px;
+        }
+        input:focus { outline: none; border-color: var(--secondary); }
+
+        .canvas-container { height: 500px; background: rgba(0,0,0,0.3); border-radius: 16px; margin-top: 15px; border: 1px solid var(--border); }
+        .legend { display: flex; justify-content: center; gap: 20px; margin: 15px 0; font-size: 0.9rem; color: #94a3b8; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .circle-prev { width: 14px; height: 14px; border-radius: 50%; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; border-radius: 12px; overflow: hidden; }
+        th { background: #1e1b4b; padding: 15px; color: var(--accent); font-weight: 600; }
+        td { padding: 15px; text-align: center; border-bottom: 1px solid var(--border); font-family: 'Fira Code'; }
+        
+        #step-log {
+            font-family: 'Fira Code', monospace; color: #94a3b8; font-size: 0.95rem; line-height: 1.8; 
+            max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 20px; 
+            border-radius: 12px; border: 1px solid var(--border); margin-top: 15px;
+        }
+        #step-log strong { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+
+    <section id="front-page">
+        <div class="hero-container">
+            <div class="hero-title">
+                <span style="text-transform: uppercase; letter-spacing: 4px; color: var(--secondary); font-weight: 700; font-size: 0.9rem;">Automata Theory & Computability</span>
+                <h1>NFA to DFA Engine</h1>
+                <div class="student-badge">
+                    Jagmohan Singh | Roll: 2024UCS1567<br>
+                    <span style="font-size: 0.85rem; font-weight: 400; color: #94a3b8;">Netaji Subhas University of Technology (NSUT)</span>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>⚙️ The Core Problem</h3>
+                    <p>Nondeterministic Finite Automata (NFA) are highly intuitive for theoretical design because they allow multiple paths for a single input. However, computers require Determinism to execute logic efficiently without guessing.</p>
+                </div>
+                <div class="info-card">
+                    <h3>📐 Mathematical Tuple</h3>
+                    <p>A Finite Automaton is defined by a 5-tuple: <br>
+                    <span class="code-text">M = (Q, Σ, δ, q0, F)</span></p>
+                    <ul>
+                        <li><strong>Q:</strong> Finite set of states</li>
+                        <li><strong>Σ:</strong> Input Alphabet</li>
+                        <li><strong>δ:</strong> Transition Function</li>
+                        <li><strong>q0:</strong> Start State</li>
+                        <li><strong>F:</strong> Set of Final States</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h3>🚀 Real-World Usage</h3>
+                    <p>Why do we convert NFAs to DFAs in the real world?</p>
+                    <ul>
+                        <li><strong>Compilers:</strong> Lexical analysis & tokenizing.</li>
+                        <li><strong>Networking:</strong> Deep packet inspection.</li>
+                        <li><strong>Search:</strong> Regex engine optimization.</li>
+                        <li><strong>Hardware:</strong> CPU logic circuit design.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button class="btn-launch" onclick="launchApp()">Initialize Subsystem ➔</button>
+        </div>
+    </section>
+
+    <main id="app-view">
+        <div class="theory-grid">
+            <div class="theory-box">
+                <h4>📚 Subset Construction</h4>
+                <p>The mathematical process of combining multiple NFA states into a single DFA state (a subset). This ensures that for every input, the DFA has exactly one deterministic path to follow.</p>
+            </div>
+            <div class="theory-box">
+                <h4>✨ Epsilon (ε) Closures</h4>
+                <p>If an NFA has ε-transitions, a machine can move states without consuming input. The subset algorithm calculates the ε-closure of a state to group all freely reachable states into one macroscopic DFA state.</p>
+            </div>
+            <div class="theory-box">
+                <h4>☠️ The Dead State (Ø)</h4>
+                <p>Also known as "Phi". If an NFA branch dies (no valid transitions), the DFA routes it to a Dead State. A complete DFA requires Ø to transition to itself for all inputs in the alphabet (Σ).</p>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h2 style="margin: 0;">System Configuration</h2>
+                <button onclick="location.reload()" style="background: transparent; border: 1px solid var(--border); color: #fff; padding: 8px 15px; border-radius: 8px; cursor:pointer;">Restart</button>
+            </div>
+            
+            <div id="error-toast" style="display: none;"></div>
+
+            <div class="input-grid">
+                <div>
+                    <label>States (comma separated)</label>
+                    <input type="text" id="states" value="q0, q1, q2">
+                </div>
+                <div>
+                    <label>Alphabet</label>
+                    <input type="text" id="alphabet" value="0, 1">
+                </div>
+            </div>
+
+            <label>Transitions (from,symbol,to; ...)</label>
+            <input type="text" id="trans" value="q0,0,q0; q0,0,q1; q0,1,q0; q1,1,q2">
+            <small style="color: #64748b; font-size: 0.8rem; display: block; margin-top: 5px;">*To test Epsilon transitions, use 'e' or 'ε'.</small>
+
+            <div class="input-grid" style="margin-top: 20px;">
+                <div>
+                    <label>Start State</label>
+                    <input type="text" id="start" value="q0">
+                </div>
+                <div>
+                    <label>Final States</label>
+                    <input type="text" id="finals" value="q2">
+                </div>
+            </div>
+
+            <button class="btn-launch" style="width: 100%; margin-top: 20px; animation: none; opacity: 1;" onclick="generate()">Execute Conversion</button>
+        </div>
+
+        <div id="results" style="display: none;">
+            <div class="glass-panel">
+                <h3 style="margin-top: 0; color: var(--primary);">Step-by-Step Derivation</h3>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-top: -10px;">Tracing subset derivations, ε-closures, and Ø state mappings dynamically.</p>
+                <div id="step-log"></div>
+            </div>
+
+            <div class="glass-panel">
+                <h3 style="margin-top: 0; color: var(--accent);">State Transition Matrix</h3>
+                <div id="table-out"></div>
+            </div>
+
+            <div class="glass-panel">
+                <h3 style="margin-top: 0; color: var(--secondary);">Topology Visualization</h3>
+                <div class="legend">
+                    <div class="legend-item"><div class="circle-prev" style="background: var(--primary);"></div> Start State</div>
+                    <div class="legend-item"><div class="circle-prev" style="border: 3px solid var(--final-glow); background: #1e293b;"></div> Final State</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div><label style="display: block; text-align: center;">Original NFA</label><div id="nfa-canvas" class="canvas-container"></div></div>
+                    <div><label style="display: block; text-align: center;">Compiled DFA</label><div id="dfa-canvas" class="canvas-container"></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        function launchApp() {
+            document.getElementById('front-page').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('front-page').style.display = 'none';
+                document.getElementById('app-view').style.display = 'block';
+                window.scrollTo(0,0);
+            }, 500);
+        }
+
+        let nfa = {};
+
+        function getEpsilonClosure(stateArray) {
+            let closure = new Set(stateArray);
+            let stack = [...stateArray];
+            
+            while(stack.length > 0) {
+                let current = stack.pop();
+                ['e', 'ε'].forEach(eps => {
+                    if(nfa[current] && nfa[current][eps]) {
+                        nfa[current][eps].forEach(dest => {
+                            if(!closure.has(dest)) {
+                                closure.add(dest);
+                                stack.push(dest);
+                            }
+                        });
+                    }
+                });
+            }
+            return Array.from(closure).sort();
+        }
+
+        function showError(msg) {
+            const toast = document.getElementById('error-toast');
+            toast.innerHTML = `⚠️ <div><strong>Validation Error:</strong><br>${msg}</div>`;
+            toast.style.display = 'flex';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function generate() {
+            document.getElementById('error-toast').style.display = 'none'; // Clear old errors
+
+            const S = document.getElementById('states').value.split(',').map(x => x.trim()).filter(x => x);
+            const A = document.getElementById('alphabet').value.split(',').map(x => x.trim()).filter(x => x);
+            const T = document.getElementById('trans').value.split(';').map(x => x.trim()).filter(x => x);
+            const startNode = document.getElementById('start').value.trim();
+            const finalNodes = document.getElementById('finals').value.split(',').map(x => x.trim()).filter(x => x);
+
+            if (S.length === 0 || A.length === 0 || !startNode) {
+                return showError("States, Alphabet, and Start State cannot be empty.");
+            }
+            if (!S.includes(startNode)) {
+                return showError(`Start state <b>'${startNode}'</b> does not exist in the defined States list.`);
+            }
+            let validFinals = finalNodes.every(f => S.includes(f));
+            if (!validFinals) {
+                return showError("One or more Final States do not exist in the defined States list.");
+            }
+
+            nfa = {}; S.forEach(s => nfa[s] = {});
+            let nfaEdges = [];
+
+            try {
+                T.forEach(r => {
+                    let parts = r.split(',').map(p => p.trim());
+                    if(parts.length === 3) {
+                        let [f, sym, t] = parts;
+                        if(!S.includes(f) || !S.includes(t)) throw new Error(`Transition contains an undefined state: '${f}' or '${t}'`);
+                        if(!A.includes(sym) && sym !== 'e' && sym !== 'ε') throw new Error(`Symbol '${sym}' is not in the Alphabet.`);
+                        
+                        if(!nfa[f][sym]) nfa[f][sym] = [];
+                        nfa[f][sym].push(t);
+                        nfaEdges.push({from: f, to: t, label: sym});
+                    }
+                });
+            } catch (err) {
+                return showError(err.message);
+            }
+
+            let dfaStates = [];
+            let dfaTrans = {};
+            let dfaFinals = [];
+            
+            let initialClosure = getEpsilonClosure([startNode]);
+            let q = [initialClosure];
+            let startStr = initialClosure.length === 0 ? "Ø" : "{" + initialClosure.join(',') + "}";
+            dfaStates.push(startStr);
+
+            let stepsHTML = `[INIT] Start State: ε-closure({${startNode}}) = <strong>${startStr}</strong><br><br>`;
+
+            while(q.length > 0) {
+                let curr = q.shift();
+                
+                let currStr = curr.length === 0 ? "Ø" : "{" + curr.sort().join(',') + "}";
+                dfaTrans[currStr] = {};
+
+                stepsHTML += `Processing Subset: <strong>${currStr}</strong><br>`;
+
+                if(curr.some(s => finalNodes.includes(s))) {
+                    if(!dfaFinals.includes(currStr)) dfaFinals.push(currStr);
+                }
+
+                A.forEach(symbol => {
+                    let nextRaw = new Set();
+                    curr.forEach(s => {
+                        if(nfa[s] && nfa[s][symbol]) nfa[s][symbol].forEach(d => nextRaw.add(d));
+                    });
+                    
+                    let nextArr = getEpsilonClosure(Array.from(nextRaw));
+                    let nextStr = nextArr.length === 0 ? "Ø" : "{" + nextArr.join(',') + "}";
+                    
+                    dfaTrans[currStr][symbol] = nextStr;
+                    let subsetLog = nextArr.length === 0 ? 'Ø' : '{' + Array.from(nextRaw).sort().join(',') + '}';
+                    stepsHTML += `&nbsp;&nbsp;↳ On input '${symbol}': goto ε-closure(${subsetLog}) = <strong>${nextStr}</strong><br>`;
+                    
+                    if(!dfaStates.includes(nextStr)) {
+                        dfaStates.push(nextStr);
+                        q.push(nextArr); 
+                    }
+                });
+                stepsHTML += "<br>";
+            }
+
+            document.getElementById('step-log').innerHTML = stepsHTML;
+            document.getElementById('results').style.display = 'block';
+            
+            let tbl = `<table><tr><th>State</th>${A.map(a => `<th>${a}</th>`).join('')}</tr>`;
+            dfaStates.forEach(s => {
+                let prefix = s === startStr ? '→ ' : '';
+                let postfix = dfaFinals.includes(s) ? ' *' : '';
+                tbl += `<tr><td>${prefix}${s}${postfix}</td>`;
+                A.forEach(a => tbl += `<td>${dfaTrans[s][a]}</td>`);
+                tbl += '</tr>';
+            });
+            document.getElementById('table-out').innerHTML = tbl + "</table>";
+
+            renderNetwork('nfa-canvas', S, nfaEdges, startNode, finalNodes);
+            
+            let dfaEdges = [];
+            dfaStates.forEach(s => {
+                A.forEach(a => {
+                    if(dfaTrans[s][a]) dfaEdges.push({from: s, to: dfaTrans[s][a], label: a});
+                });
+            });
+            renderNetwork('dfa-canvas', dfaStates, dfaEdges, startStr, dfaFinals);
+
+            setTimeout(() => { document.getElementById('results').scrollIntoView({ behavior: 'smooth' }); }, 100);
+        }
+
+        function renderNetwork(id, nodes, edges, start, finals) {
+            let nodeData = nodes.map(n => {
+                const isFinal = finals.includes(n);
+                return {
+                    id: n, label: n, shape: 'circle', borderWidth: isFinal ? 6 : 2,
+                    color: { background: n === start ? '#4f46e5' : '#1e293b', border: isFinal ? '#10b981' : '#818cf8' },
+                    shadow: isFinal ? { enabled: true, color: '#06b6d4', size: 15, x: 0, y: 0 } : false,
+                    font: { color: 'white', face: 'Fira Code', size: 14 }
+                };
+            });
+
+            let edgeMap = {};
+            edges.forEach(e => {
+                let key = e.from + '|' + e.to;
+                if(!edgeMap[key]) edgeMap[key] = { from: e.from, to: e.to, labels: [] };
+                edgeMap[key].labels.push(e.label);
+            });
+
+            let groupedEdges = Object.values(edgeMap).map(e => ({
+                from: e.from, to: e.to, label: e.labels.join(', '), arrows: 'to',
+                color: { color: '#94a3b8', highlight: '#ec4899' },
+                font: { align: 'top', color: '#06b6d4', background: 'rgba(15, 23, 42, 0.7)', strokeWidth: 0 },
+                smooth: { type: 'curvedCW', roundness: 0.2 }
+            }));
+
+            let options = {
+                physics: { enabled: true, solver: 'repulsion', repulsion: { nodeDistance: 180, springLength: 200, springConstant: 0.05 }, stabilization: { enabled: true, iterations: 200 } },
+                interaction: { hover: true, dragNodes: true }, layout: { randomSeed: 5 }
+            };
+            new vis.Network(document.getElementById(id), { nodes: new vis.DataSet(nodeData), edges: new vis.DataSet(groupedEdges) }, options);
+        }
+    </script>
+</body>
+</html>
