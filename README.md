@@ -1,22 +1,27 @@
-  nfa-to-dfa-visulizer
-  
-  Automata Visualizer: NFA to DFA Converter
+NFA to DFA Engine: Visualizing Automata Theory
 
-  Overview
-This project is an interactive, web-based visualization tool designed to demonstrate the conversion of a **Nondeterministic Finite Automaton (NFA)** into a **Deterministic Finite Automaton (DFA)**. 
+The Concept
 
-Built as a core concept demonstration for Automata Theory and Computability, the engine utilizes the **Subset Construction Algorithm (Powerset Construction)** to compute the deterministic states from an ambiguous NFA and renders the network topology in real-time.
+Nondeterministic Finite Automata (NFA) are great for human logic, but computers require Deterministic Finite Automata (DFA) to actually execute tasks efficiently (like compiling code or searching text). Converting them involves complex abstract math that is traditionally very hard to visualize.
 
-  Key Features
-* **Algorithmic Conversion:** Accurately computes the DFA subsets, handling transition mapping and final state carry-over.
-* **Transition Matrix Generation:** Automatically builds and displays the state transition table for the compiled DFA, including the handling of Dead States (Ø).
-* **Dynamic Graph Rendering:** Visualizes both the original NFA and the compiled DFA side-by-side using a physics-based repulsion system to prevent node overlapping.
-* **Visual Clarity:** Accepting (Final) states are distinctly marked with a dual-color neon halo (Double Circle effect) for instant identification.
-* **Modern UI:** Features a responsive, cyberpunk-inspired glassmorphism interface with ambient background animations.
+What I Built
+I engineered a web-based visualization tool that automatically converts any NFA into a strict DFA. Instead of just crunching the math in the background, the engine shows the exact step-by-step derivation, builds the state transition matrix, and dynamically draws the final graph topology.
 
-  Technologies Used
-* **Frontend:** HTML5, CSS3, Vanilla JavaScript
-* **Visualization Engine:** [vis-network.js](https://visjs.github.io/vis-network/) for interactive graph physics and node rendering.
+Core Features
+
+Subset Construction: Automatically groups multiple NFA states into single, deterministic DFA states.
+
+ε-Closures: Handles complex empty-string transitions seamlessly using stack-based traversal.
+
+Dead State (Ø) Routing: Automatically catches broken paths and maps them to a mathematically complete dead state.
+
+The Tech Stack
+
+Vanilla JavaScript: Chosen for pure computational speed. It utilizes native Set objects to handle state grouping instantly in the browser without the overhead of heavy frameworks like React.
+
+vis-network: Powers the interactive graph visualization. It uses a built-in physics engine so nodes auto-arrange, pushing away from each other so transition lines never tangle.
+
+Modern UI: Built with raw HTML5 and CSS Grid, featuring a "Glassmorphism" frosted-glass aesthetic for a clean, futuristic look.
 
   Author
 **Jagmohan Singh** Computer Science Engineering  
